@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/static/css/main.93ca494f.css",
+    "main.js": "/static/js/main.dad35cdb.js",
+    "static/media/vazir-all-400-normal.woff": "/static/media/vazir-all-400-normal.f79ac16680e2cfdef514.woff",
+    "static/media/vazir-all-400-normal.woff2": "/static/media/vazir-all-400-normal.3d45da03f7783a355f7f.woff2",
+    "index.html": "/index.html",
+    "main.93ca494f.css.map": "/static/css/main.93ca494f.css.map",
+    "main.dad35cdb.js.map": "/static/js/main.dad35cdb.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.93ca494f.css",
+    "static/js/main.dad35cdb.js"
+  ]
+}
