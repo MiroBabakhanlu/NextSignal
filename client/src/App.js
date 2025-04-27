@@ -6,10 +6,15 @@ import UserContextProvider from './Context/UserContextProvider';
 import WebApp from './WebApp';
 import ShippingContextProvider from './Context/ShippingCotextProvider';
 
+//react query 
+import {QueryClient, QueryClientProvider} from '@tanstack/react-query'
+
+const queryClient  = new queryClient();
 function App() {
   return (
     <div className="App">
-      {/* <StrictMode> */}
+      {/* <StrictMode> */}  
+      <QueryClientProvider client={queryClient}>
         <UserContextProvider>
           <ProductContextProvider>
             <ShippingContextProvider>
@@ -19,6 +24,7 @@ function App() {
             </ShippingContextProvider>
           </ProductContextProvider>
         </UserContextProvider>
+      </QueryClientProvider>
       {/* </StrictMode> */}
     </div>
   );
