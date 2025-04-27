@@ -1,9 +1,0 @@
-# .env
-/node_modules
-# Node modules
-node_modules/
-client/node_modules/
-server/node_modules/
-
-# Build files
-client/build/
