@@ -6,14 +6,39 @@ import { getQuantity } from '../../Helper/Helper';
 import { FaPlus, FaMinus, FaTrash } from 'react-icons/fa';
 import { colorContext } from '../../Context/ColorContextProvider';
 
+//importing react-query
+import { useQuery } from '@tanstack/react-query';
+import axiosInstance from '../../Helper/apiInterceptors';
+
 
 
 const Store = () => {
   const { state, dispatch } = useContext(ProductContext);
-  const [products, setProducts] = useState([]);
   const [responseMsg, setResponseMsg] = useState('');
-  const [loading, setLoading] = useState(true);
   const { config } = useContext(colorContext);
+
+
+
+  const fetchProducts = async () => {
+    try {
+      const response = await axiosInstance.get('/get-products');
+      if (response.status === 200) {
+          return response.data;
+      }
+    } catch (error) {
+      if (error.response) {
+        setResponseMsg('خطای داخلی');
+      }
+    }
+  }
+
+
+  const { data: products, isLoading, error:queryError } = useQuery({
+    queryKey: ['products'],
+    queryFn: fetchProducts, 
+  });
+
+
   const [errors, setErrors] = useState({}); // Track errors by product ID
 
   const [error, setError] = useState('');
@@ -45,27 +70,8 @@ const Store = () => {
 
 
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/get-products`, {
-        // const response = await axios.get('http://localhost:8080/api/get-products', {
-          withCredentials: true,
-        });
-        if (response.status === 200) {
-          setProducts(response.data);
-        }
-      } catch (error) {
-        if (error.response) {
-          setResponseMsg('خطای داخلی');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
 
-    fetchProducts();
-  }, []);
+
 
 
   useEffect(() => {
@@ -76,7 +82,7 @@ const Store = () => {
   }, [error]);
 
 
-  if (loading) {
+  if (isLoading) {
     return <Loading>
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><circle fill="#000000" stroke="#000000" stroke-width="7" r="15" cx="35" cy="100"><animate attributeName="cx" calcMode="spline" dur="1.8" values="35;165;165;35;35" keySplines="0 .1 .5 1;0 .1 .5 1;0 .1 .5 1;0 .1 .5 1" repeatCount="indefinite" begin="0"></animate></circle><circle fill="#000000" stroke="#000000" stroke-width="7" opacity=".8" r="15" cx="35" cy="100"><animate attributeName="cx" calcMode="spline" dur="1.8" values="35;165;165;35;35" keySplines="0 .1 .5 1;0 .1 .5 1;0 .1 .5 1;0 .1 .5 1" repeatCount="indefinite" begin="0.05"></animate></circle><circle fill="#000000" stroke="#000000" stroke-width="7" opacity=".6" r="15" cx="35" cy="100"><animate attributeName="cx" calcMode="spline" dur="1.8" values="35;165;165;35;35" keySplines="0 .1 .5 1;0 .1 .5 1;0 .1 .5 1;0 .1 .5 1" repeatCount="indefinite" begin=".1"></animate></circle><circle fill="#000000" stroke="#000000" stroke-width="7" opacity=".4" r="15" cx="35" cy="100"><animate attributeName="cx" calcMode="spline" dur="1.8" values="35;165;165;35;35" keySplines="0 .1 .5 1;0 .1 .5 1;0 .1 .5 1;0 .1 .5 1" repeatCount="indefinite" begin=".15"></animate></circle><circle fill="#000000" stroke="#000000" stroke-width="7" opacity=".2" r="15" cx="35" cy="100"><animate attributeName="cx" calcMode="spline" dur="1.8" values="35;165;165;35;35" keySplines="0 .1 .5 1;0 .1 .5 1;0 .1 .5 1;0 .1 .5 1" repeatCount="indefinite" begin=".2"></animate></circle></svg>
     </Loading>;
