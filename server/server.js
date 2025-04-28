@@ -21,6 +21,9 @@ const GetOrders = require('./src/Middleware/GetOrders.js');
 const { ChangeOrderStatus } = require('./src/Middleware/ChangeOrderStatus.js');
 const { GetSalesDetails } = require('./src/Middleware/GetSalesDetails.js');
 const { GetCustomerOrders } = require('./src/Middleware/GetCustomerOrders.js');
+const { GetOverviewData } = require('./src/Middleware/GetOverviewData.js');
+
+
 const rateLimit = require('express-rate-limit');
 const RateLimitMongo = require("rate-limit-mongo");
 const MongoStore = require('connect-mongo');
@@ -178,10 +181,16 @@ app.get('/api/get-orders', checkAuth, checkAuthAdmin, GetOrders);
 app.get('/api/get-curstomer-orders', checkAuth, GetCustomerOrders);
 app.get('/api/dashboard', checkAuth, checkRole, getDashboard)
 app.get('/api/check-session', checkSession)
+
 app.get('/api/get-usercount', checkAuthAdmin, countUsers)
 app.get('/api/get-productcount', checkAuthAdmin, countProducts)
 app.get('/api/get-orderscount', checkAuthAdmin, countOrders)
 app.get('/api/get-sales-info', checkAuth, checkAuthAdmin, GetSalesDetails)
+
+//2025-04-28
+app.get('/api/get-overview', checkAuth, checkRole, GetOverviewData)
+
+
 app.get('/api/cdash', checkAuth, GetUserInfo)
 app.get('/api/check-date-capacity', checkAuth, checkingCapacity)
 
