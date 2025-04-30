@@ -1,84 +1,81 @@
-import axios from 'axios';
-import React, { useContext, useEffect, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useContext, useState } from 'react';
 import styled from 'styled-components';
-import { Loading } from '../Store/Store';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { colorContext } from '../../Context/ColorContextProvider';
 import axiosInstance from '../../Helper/apiInterceptors';
-
-
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
 import { notify } from '../../Helper/toast';
 
-
 const Orders = () => {
-  const [orders, setOrders] = useState([]);
-  const [responseMsg, setResponseMsg] = useState('')
-
   const { config } = useContext(colorContext);
-
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const response = await axiosInstance.get('/get-orders');
-        if (response.status === 200) {
-          setOrders(response.data);
-        }
-      } catch (error) {
-        setResponseMsg(error.message);
-      }
-    };
-    fetchOrders();
-  }, []);
-
+  const queryClient = useQueryClient();
   const [hiddenOrders, setHiddenOrders] = useState([]);
-  const toggleHideOrder = (i) => {
-    if (hiddenOrders.includes(i)) {
-      setHiddenOrders(hiddenOrders.filter(index => index !== i))
-    } else {
-      setHiddenOrders([...hiddenOrders, i])
+  const [statusOnEdit, setStatusOnEdit] = useState([]);
+  const [filter, setFilter] = useState(false);
+
+  // Fetch orders with React Query
+  const { data: orders = [], isLoading, isError, error } = useQuery({
+    queryKey: ['orders'],
+    queryFn: async () => {
+      const response = await axiosInstance.get('/get-orders');
+      return response.data;
+    },
+    staleTime: 1000 * 60, // 1 minute before refetch
+  });
+
+  // Status change mutation
+  const { mutate: changeStatus } = useMutation({
+    mutationFn: async ({ newStatus, orderId }) => {
+      const response = await axiosInstance.patch('/change-order-status', { 
+        newStatus, 
+        orderId 
+      });
+      return response.data;
+    },
+    onSuccess: (data, variables) => {
+      const { i } = variables;
+      setStatusOnEdit(statusOnEdit.filter(index => index !== i));
+      notify(`Status changed successfully to ${data.order.status}`, 'success');
+      queryClient.invalidateQueries(['orders']);
+    },
+    onError: (error) => {
+      notify(error.message, 'error');
     }
-  }
+  });
 
-  const statusEnums = { Pending: 'Pending', Processing: 'Processing', Shipped: 'Shipped', Delivered: 'Delivered', Cancelled: 'Cancelled' };
+  const statusEnums = { 
+    Pending: 'Pending', 
+    Processing: 'Processing', 
+    Shipped: 'Shipped', 
+    Delivered: 'Delivered', 
+    Cancelled: 'Cancelled' 
+  };
 
-  const [statusOnEdit, setStatusOnEdit] = useState([])
+  const toggleHideOrder = (i) => {
+    setHiddenOrders(prev => 
+      prev.includes(i) 
+        ? prev.filter(index => index !== i) 
+        : [...prev, i]
+    );
+  };
 
   const toggleStatusEdit = (i) => {
-    if (statusOnEdit.includes(i)) {
-      setStatusOnEdit(statusOnEdit.filter(index => index !== i))
-    } else {
-      setStatusOnEdit([...statusOnEdit, i])
-    }
-  }
+    setStatusOnEdit(prev => 
+      prev.includes(i) 
+        ? prev.filter(index => index !== i) 
+        : [...prev, i]
+    );
+  };
 
-  const changeStatus = async (newStatus, orderId, i) => {
-    if (!newStatus || !orderId) {
-      setResponseMsg('problem accourd with handeling neStatus and orderId')
-      return;
-    }
-    try {
-      const response = await axiosInstance.patch('/change-order-status', { newStatus, orderId });
+  const handleStatusChange = (newStatus, orderId, i) => {
+    if (!newStatus || !orderId) return;
+    changeStatus({ newStatus, orderId, i });
+  };
 
-      if (response.status === 200) {
-        setStatusOnEdit(statusOnEdit.filter(index => index !== i))
-        const updatedOrder = response.data.order;
-        setOrders(prevOrders => {
-          return prevOrders.map(order =>
-            order.orderId === updatedOrder.orderId ? updatedOrder : order
-          );
-        });
-        notify(`status of product was changed successfully to ${newStatus}`, 'success');
-      }
-
-    } catch (error) {
-      notify(error.message, 'error');
-      setResponseMsg(error.message);
-    }
-  }
-
-  const [filter, setFilter] = useState(false);
+  if (isLoading) return <Loading>Loading orders...</Loading>;
+  if (isError) return <NoOrders>Error: {error.message}</NoOrders>;
 
   return (
     <>
@@ -93,27 +90,27 @@ const Orders = () => {
             .filter((order) => !filter || order?.status === 'Pending')
             .map((order, index) => (
               <OrderCard theme={config} isHidden={hiddenOrders.includes(index)} key={index}>
+                {/* Rest of your component remains the same */}
                 <UserInfo theme={config}>
-                  {responseMsg}
                   <h2>{order?.user?.firstName} {order?.user?.lastName}</h2>
                   <p> {order?.user?.phoneNumber} <strong>: شماره تلفن</strong></p>
                   <Status theme={config}>{order?.status} <strong>: حالت فعلی </strong></Status>
 
-                  <ChangeStatus theme={config} onClick={() => toggleStatusEdit(index)} >ChangeStatus</ChangeStatus>
+                  <ChangeStatus theme={config} onClick={() => toggleStatusEdit(index)}>ChangeStatus</ChangeStatus>
 
                   {statusOnEdit.includes(index) && !hiddenOrders.includes(index) ?
                     <StatusEnums theme={config}>
-                      <div onClick={() => changeStatus(statusEnums.Pending, order?.orderId, index)}><p>Pending</p></div>
-                      <div onClick={() => changeStatus(statusEnums.Processing, order?.orderId, index)}><p>Processing</p></div>
-                      <div onClick={() => changeStatus(statusEnums.Shipped, order?.orderId, index)}><p>Shipped</p></div>
-                      <div onClick={() => changeStatus(statusEnums.Delivered, order?.orderId, index)}><p>Delivered</p></div>
-                      <div onClick={() => changeStatus(statusEnums.Cancelled, order?.orderId, index)}><p>Cancelled</p></div>
+                      <div onClick={() => handleStatusChange(statusEnums.Pending, order?.orderId, index)}><p>Pending</p></div>
+                      <div onClick={() => handleStatusChange(statusEnums.Processing, order?.orderId, index)}><p>Processing</p></div>
+                      <div onClick={() => handleStatusChange(statusEnums.Shipped, order?.orderId, index)}><p>Shipped</p></div>
+                      <div onClick={() => handleStatusChange(statusEnums.Delivered, order?.orderId, index)}><p>Delivered</p></div>
+                      <div onClick={() => handleStatusChange(statusEnums.Cancelled, order?.orderId, index)}><p>Cancelled</p></div>
                     </StatusEnums>
                     : ''
                   }
-
                 </UserInfo>
 
+                {/* Rest of your JSX remains the same */}
                 <Address theme={config}>
                   {order?.address?.plaque}, {order?.address?.postalCode}, {order?.address?.alleys}, {order?.address?.street}, {order?.address?.neighbourhood}, {order?.address?.area}  <strong> : آدرس</strong>
                 </Address>
@@ -124,10 +121,9 @@ const Orders = () => {
                   }).format(new Date(order?.dateAndTime.date))} ساعت {order?.dateAndTime.time}
                 </DateTime>
 
-                {!hiddenOrders.includes(index) ?
-
+                {!hiddenOrders.includes(index) &&
                   <>
-                    <h3 > محصولات سفارش داده شده</h3>
+                    <h3> محصولات سفارش داده شده</h3>
                     <ProductList theme={config}>
                       {order?.orderedProducts.map((product, idx) => (
                         <ProductItem theme={config} key={idx}>
@@ -139,13 +135,10 @@ const Orders = () => {
                       ))}
                     </ProductList>
                   </>
-                  :
-                  ''
                 }
                 <HideBox theme={config} onClick={() => toggleHideOrder(index)}>
                   {hiddenOrders.includes(index) ? <FaEyeSlash /> : <FaEye />}
                 </HideBox>
-
               </OrderCard>
             ))
         ) : (
@@ -154,7 +147,7 @@ const Orders = () => {
           </NoOrders>
         )}
         <ToastContainer />
-      </Container >
+      </Container>
     </>
   );
 };
@@ -164,6 +157,16 @@ export default Orders;
 {/* <Loading><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><circle fill="#000000" stroke="#000000" stroke-width="7" r="15" cx="35" cy="100"><animate attributeName="cx" calcMode="spline" dur="1.8" values="35;165;165;35;35" keySplines="0 .1 .5 1;0 .1 .5 1;0 .1 .5 1;0 .1 .5 1" repeatCount="indefinite" begin="0"></animate></circle><circle fill="#000000" stroke="#000000" stroke-width="7" opacity=".8" r="15" cx="35" cy="100"><animate attributeName="cx" calcMode="spline" dur="1.8" values="35;165;165;35;35" keySplines="0 .1 .5 1;0 .1 .5 1;0 .1 .5 1;0 .1 .5 1" repeatCount="indefinite" begin="0.05"></animate></circle><circle fill="#000000" stroke="#000000" stroke-width="7" opacity=".6" r="15" cx="35" cy="100"><animate attributeName="cx" calcMode="spline" dur="1.8" values="35;165;165;35;35" keySplines="0 .1 .5 1;0 .1 .5 1;0 .1 .5 1;0 .1 .5 1" repeatCount="indefinite" begin=".1"></animate></circle><circle fill="#000000" stroke="#000000" stroke-width="7" opacity=".4" r="15" cx="35" cy="100"><animate attributeName="cx" calcMode="spline" dur="1.8" values="35;165;165;35;35" keySplines="0 .1 .5 1;0 .1 .5 1;0 .1 .5 1;0 .1 .5 1" repeatCount="indefinite" begin=".15"></animate></circle><circle fill="#000000" stroke="#000000" stroke-width="7" opacity=".2" r="15" cx="35" cy="100"><animate attributeName="cx" calcMode="spline" dur="1.8" values="35;165;165;35;35" keySplines="0 .1 .5 1;0 .1 .5 1;0 .1 .5 1;0 .1 .5 1" repeatCount="indefinite" begin=".2"></animate></circle></svg></Loading> */ }
 
 // Styled Components
+
+const Loading = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-size: 1.5rem;
+  color: ${({ theme }) => theme.titile1};
+`;
+
 const Container = styled.div`
   padding: 40px 20px;
   max-width: 1200px;
